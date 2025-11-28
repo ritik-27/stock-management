@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+
+# Virtual env
+venv/
+env/
+.venv/
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+
+# dotenv and secrets
+.env
+.env.local
+.env.*.local
+
+# SQLite DBs (if any)
+*.db
+*.sqlite3
+
+# Mac
+.DS_Store
+
+# Logs
+*.log
