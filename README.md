@@ -293,10 +293,6 @@ http://localhost:5000
 **Required Fields:**
 - `need_restock` (boolean): true or false
 
-**Accepted Values:**
-- Boolean: `true`, `false`
-- String: `"true"`, `"false"`, `"yes"`, `"no"`, `"y"`, `"n"`, `"1"`, `"0"`
-- Number: `1`, `0`
 
 **Response:** `200 OK`
 ```json
