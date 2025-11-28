@@ -100,3 +100,63 @@ def register_routes(app):
             return jsonify({"message": "Product deleted"}), 200
         except (DoesNotExist, ValidationError):
             return json_error("Product not found", 404)
+
+    # Check restock status for a specific product
+    @app.route("/restock/<string:product_id>", methods=["GET"])
+    def check_restock(product_id):
+        try:
+            p = Product.objects.get(id=product_id)
+        except (DoesNotExist, ValidationError):
+            return json_error("Product not found", 404)
+
+        return jsonify({
+            "id": str(p.id),
+            "need_restock": bool(p.need_restock),
+            "available_quantity": int(p.available_quantity),
+            "total_quantity": int(p.total_quantity)
+        }), 200
+
+    # Manually update restock flag for a product
+    @app.route("/restock/update/<string:product_id>", methods=["PUT"])
+    def update_restock_status(product_id):
+        data = extract_json()
+        if data is None:
+            return json_error("Request body must be valid JSON", 400)
+
+        if "need_restock" not in data:
+            return json_error("Missing required field: need_restock", 400)
+
+        val = data["need_restock"]
+        if isinstance(val, bool):
+            flag = val
+        elif isinstance(val, (int, float)):
+            flag = bool(val)
+        elif isinstance(val, str):
+            v = val.strip().lower()
+            if v in ("true", "1", "yes", "y"):
+                flag = True
+            elif v in ("false", "0", "no", "n"):
+                flag = False
+            else:
+                return json_error("Field 'need_restock' must be boolean", 400)
+        else:
+            return json_error("Field 'need_restock' must be boolean", 400)
+
+        try:
+            p = Product.objects.get(id=product_id)
+        except (DoesNotExist, ValidationError):
+            return json_error("Product not found", 404)
+
+        try:
+            p.update(set__need_restock=flag)
+            p.reload()
+        except ValidationError as e:
+            return json_error(str(e), 400)
+
+        return jsonify(p.to_dict()), 200
+
+    # List all products that need restock
+    @app.route("/restock/list", methods=["GET"])
+    def list_restock_items():
+        products = Product.objects(need_restock=True)
+        return jsonify([p.to_dict() for p in products]), 200
