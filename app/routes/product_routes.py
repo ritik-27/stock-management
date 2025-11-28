@@ -2,7 +2,7 @@
 from flask import jsonify, request
 from mongoengine.errors import ValidationError, DoesNotExist
 from app.models import Product
-from app.utils import json_error, extract_json
+from app.utils import json_error, extract_json, sanitize_update_payload
 
 def register_routes(app):
     # Create product
@@ -46,3 +46,57 @@ def register_routes(app):
         except (DoesNotExist, ValidationError):
             return json_error("Product not found", 404)
         return jsonify(p.to_dict()), 200
+
+    # Update product
+    @app.route("/product/<string:product_id>", methods=["PUT"])
+    def update_product(product_id):
+        data = extract_json()
+        if data is None:
+            return json_error("Request body must be valid JSON", 400)
+
+        try:
+            p = Product.objects.get(id=product_id)
+        except (DoesNotExist, ValidationError):
+            return json_error("Product not found", 404)
+
+        updates = sanitize_update_payload(data)
+        print(updates)
+        if not updates:
+            return json_error("No valid updatable fields provided", 400)
+
+        try:
+            if "name" in updates:
+                p.name = str(updates["name"])
+            if "description" in updates:
+                p.description = str(updates["description"])
+            if "price" in updates:
+                p.price = float(updates["price"])
+            if "total_quantity" in updates:
+                p.total_quantity = int(updates["total_quantity"])
+            if "available_quantity" in updates:
+                p.available_quantity = int(updates["available_quantity"])
+            if "available_quantity" in updates and "total_quantity" in updates:
+                av = int(updates["available_quantity"])
+                tot = int(updates["total_quantity"])
+
+                if av > tot:
+                    return json_error("available_quantity cannot be greater than total_quantity", 400)
+
+            print("Before save:", p.to_dict())
+            p.save()
+        except (ValueError, TypeError):
+            return json_error("Invalid data types for one or more fields", 400)
+        except ValidationError as e:
+            return json_error(str(e), 400)
+
+        return jsonify(p.to_dict()), 200
+
+    # Delete product
+    @app.route("/product/<string:product_id>", methods=["DELETE"])
+    def delete_product(product_id):
+        try:
+            p = Product.objects.get(id=product_id)
+            p.delete()
+            return jsonify({"message": "Product deleted"}), 200
+        except (DoesNotExist, ValidationError):
+            return json_error("Product not found", 404)
